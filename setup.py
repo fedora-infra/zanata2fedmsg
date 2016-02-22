@@ -4,7 +4,7 @@ from setuptools import setup
 setup(
     name='zanata2fedmsg',
     description='zanata2fedmsg bridges zanata to fedmsg',
-    version='0.1',
+    version='0.2',
     author='Ralph Bean',
     author_email='rbean@redhat.com',
     license='GPLv3+',
