@@ -6,7 +6,7 @@ that it actually came from zanata and then republish the payload to our own
 fedmsg bus.
 
 Author:     Ralph Bean <rbean@redhat.com>
-License:    GPLv3+
+License:    GPLv2+
 """
 
 import hmac

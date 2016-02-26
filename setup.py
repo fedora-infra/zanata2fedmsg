@@ -7,7 +7,7 @@ setup(
     version='0.2',
     author='Ralph Bean',
     author_email='rbean@redhat.com',
-    license='GPLv3+',
+    license='GPLv2+',
     url='https://github.com/fedora-infra/zanata2fedmsg',
     py_modules=['zanata2fedmsg'],
     packages=[],
