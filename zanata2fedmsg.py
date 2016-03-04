@@ -9,6 +9,7 @@ Author:     Ralph Bean <rbean@redhat.com>
 License:    GPLv2+
 """
 
+import base64
 import hmac
 import hashlib
 import json
@@ -16,6 +17,9 @@ import re
 
 import fedmsg
 import flask
+
+import logging
+log = logging.getLogger()
 
 app = flask.Flask(__name__)
 app.config.from_envvar('ZANATA2FEDMSG_CONFIG')
@@ -31,6 +35,11 @@ app.config.from_envvar('ZANATA2FEDMSG_CONFIG')
 #}
 
 
+def compute_per_project_secret(name):
+    salt = app.config['WEBHOOK_SALT']
+    return hmac.new(salt, name, hashlib.sha256).hexdigest()
+
+
 @app.route('/')
 def index():
     return "Source:  https://github.com/fedora-infra/zanata2fedmsg"
@@ -42,27 +51,48 @@ def camel2dot(camel):
     return '.'.join([s.lower() for s in re.findall(regexp, camel)])
 
 
-@app.route('/webhook/<provided_secret>', methods=['POST'])
-def webhook(provided_secret):
+@app.route('/webhook/<url_project>', methods=['POST'])
+def webhook(url_project):
 
     # First, verify that the hashed url sent to us is the one that we provided
     # to zanata in the first place.
-    salt = app.config['WEBHOOK_SALT']
-    payload = json.loads(flask.request.data)
-    name = payload['project']
-    valid_secret = hmac.new(salt, name, hashlib.sha256).hexdigest()
 
-    if provided_secret != valid_secret:
-        error = "%s is not valid for %s" % (provided_secret, name)
+    header_hash = flask.request.headers.get('X-Zanata-Webhook', None)
+    if not header_hash:
+        error = 'No X-Zanata-Webhook header found on the request.'
         return error, 403
 
-    # XXX - Note that the validation mechanism we used above is not really
-    # secure. An attacker could eavesdrop on the request and get the url and
-    # then perform a replay attack (since the provided_secret will be the same
-    # every time for each project).  It would be better to use a shared salt
-    # and then sign each message uniquely, but we'll have to wait until zanata
-    # supports something like that.  This will do in the mean time.
-    # See https://bugzilla.redhat.com/show_bug.cgi?id=1213630
+    payload = json.loads(flask.request.data)
+
+    name = payload['project']
+    if name != url_project:
+        error = "projects don't match:  %r != %r" % (url_project, name)
+        return error, 400
+
+    url = flask.request.url
+    url = url.replace('http:', 'https:')
+    content = flask.request.data.encode('utf-8') + url.encode('utf-8')
+    secret = compute_per_project_secret(name)
+
+    log.debug("per-project secret for %r is %r" % (name, secret))
+    log.debug("Verifying content %r" % content)
+
+    # This is insane.
+    # http://docs.zanata.org/en/release/user-guide/projects/project-settings/#webhooks
+    local_hash = base64.b64encode(
+        hmac.new(
+            secret,
+            base64.b64encode(
+                hmac.new(secret, content, hashlib.sha1).hexdigest()
+            ),
+            hashlib.sha1
+        ).hexdigest()
+    )
+    log.debug("Comparing %r with %r" % (header_hash, local_hash))
+
+    if header_hash != local_hash:
+        error = "%s is not valid for %s" % (header_hash, name)
+        return error, 403
 
     # Having verified the message, we're all set.  Republish it on our bus.
     topic = camel2dot(payload['eventType'].split('.')[-1])
