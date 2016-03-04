@@ -48,7 +48,7 @@ def webhook(provided_secret):
     # First, verify that the hashed url sent to us is the one that we provided
     # to zanata in the first place.
     salt = app.config['WEBHOOK_SALT']
-    payload = json.loads(flask.request.body)
+    payload = json.loads(flask.request.data)
     name = payload['project']
     valid_secret = hmac.new(salt, name, hashlib.sha256).hexdigest()
 
