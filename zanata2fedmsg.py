@@ -31,6 +31,11 @@ app.config.from_envvar('ZANATA2FEDMSG_CONFIG')
 #}
 
 
+@app.route('/')
+def index():
+    return "Source:  https://github.com/fedora-infra/zanata2fedmsg"
+
+
 def camel2dot(camel):
     """ Convert CamelCaseText to dot.separated.text. """
     regexp = r'([A-Z][a-z0-9]+|[a-z0-9]+|[A-Z0-9]+)'
