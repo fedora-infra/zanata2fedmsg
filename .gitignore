@@ -1,3 +1,4 @@
 dist
 zanata2fedmsg.egg-info
 *.pyc
+.tox
