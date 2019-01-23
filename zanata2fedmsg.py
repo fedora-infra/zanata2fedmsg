@@ -3,7 +3,7 @@
 This is a small Flask app designed to receive the POST webhook callbacks fired
 by fedora.zanata.org.  Upon receiving a POST, this webapp will try to verify
 that it actually came from zanata and then republish the payload to our own
-fedmsg bus.
+Fedora Messaging bus.
 
 Author:     Ralph Bean <rbean@redhat.com>
 License:    GPLv2+
@@ -15,8 +15,9 @@ import hashlib
 import json
 import re
 
-import fedmsg
 import flask
+from fedora_messaging.api import Message, publish
+from fedora_messaging.exceptions import PublishReturned, ConnectionException
 
 import logging
 log = logging.getLogger()
@@ -96,11 +97,19 @@ def webhook(url_project):
 
     # Having verified the message, we're all set.  Republish it on our bus.
     topic = camel2dot(payload['eventType'].split('.')[-1])
-    fedmsg.publish(
-        modname='zanata',
-        topic=topic,
-        msg=payload,
-    )
+    try:
+        msg = Message(
+            topic="zanata.{}.v1".format(topic),
+            body=payload,
+        )
+        publish(msg)
+    except PublishReturned as e:
+        log.warning(
+            "Fedora Messaging broker rejected message %s: %s",
+            msg.id, e
+        )
+    except ConnectionException as e:
+        log.warning("Error sending message %s: %s", msg.id, e)
     return "Everything is 200 OK"
 
 

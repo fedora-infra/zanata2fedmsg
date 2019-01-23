@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name='zanata2fedmsg',
-    description='zanata2fedmsg bridges zanata to fedmsg',
+    description='Bridge Zanata to Fedora Messaging',
     version='0.2',
     author='Ralph Bean',
     author_email='rbean@redhat.com',
@@ -11,7 +11,7 @@ setup(
     url='https://github.com/fedora-infra/zanata2fedmsg',
     py_modules=['zanata2fedmsg'],
     packages=[],
-    install_requires=['fedmsg', 'flask'],
+    install_requires=['fedora_messaging', 'flask'],
     scripts=[
         'utility/zanata2fedmsg-webhook-generator.py',
     ],
